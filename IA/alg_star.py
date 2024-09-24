@@ -1,6 +1,23 @@
 import heapq
 
-distancias = {
+grafo_vizinhos = {
+    'Criciuma': {'Ararangua': 40, 'Tubarão': 50, 'Içara': 15},
+    'Ararangua': {'Criciuma': 40, 'Sombrio': 30},
+    'Tubarão': {'Criciuma': 50, 'Laguna': 30, 'Braço do Norte': 40},
+    'Laguna': {'Tubarão': 30, 'Imbituba': 25},
+    'Imbituba': {'Laguna': 25, 'Garopaba': 20},
+    'Garopaba': {'Imbituba': 20, 'Paulo Lopes': 10},
+    'Içara': {'Criciuma': 15, 'Morro da Fumaça': 20},
+    'Morro da Fumaça': {'Içara': 20, 'Orleans': 30},
+    'Sombrio': {'Ararangua': 30, 'Turvo': 25},
+    'Turvo': {'Sombrio': 25, 'Meleiro': 15},
+    'Braço do Norte': {'Tubarão': 40, 'Orleans': 25},
+    'Orleans': {'Braço do Norte': 25, 'Morro da Fumaça': 30},
+    'Paulo Lopes': {'Garopaba': 10},
+    'Meleiro': {'Turvo': 15}
+}
+
+grafo_linha_reta = {
     'Criciuma': {'Criciuma': 0, 'Ararangua': 40, 'Tubarão': 50, 'Içara': 15, 'Laguna': 80, 'Imbituba': 105, 'Garopaba': 125, 'Morro da Fumaça': 35, 'Sombrio': 70, 'Turvo': 90, 'Braço do Norte': 90, 'Orleans': 75, 'Paulo Lopes': 135, 'Meleiro': 105},
     'Ararangua': {'Criciuma': 40, 'Ararangua': 0, 'Tubarão': 85, 'Içara': 50, 'Laguna': 110, 'Imbituba': 135, 'Garopaba': 155, 'Morro da Fumaça': 60, 'Sombrio': 30, 'Turvo': 50, 'Braço do Norte': 125, 'Orleans': 110, 'Paulo Lopes': 165, 'Meleiro': 65},
     'Tubarão': {'Criciuma': 50, 'Ararangua': 85, 'Tubarão': 0, 'Içara': 65, 'Laguna': 30, 'Imbituba': 55, 'Garopaba': 75, 'Morro da Fumaça': 50, 'Sombrio': 115, 'Turvo': 135, 'Braço do Norte': 40, 'Orleans': 55, 'Paulo Lopes': 85, 'Meleiro': 150},
@@ -17,23 +34,20 @@ distancias = {
     'Meleiro': {'Criciuma': 105, 'Ararangua': 65, 'Tubarão': 150, 'Içara': 120, 'Laguna': 180, 'Imbituba': 205, 'Garopaba': 225, 'Morro da Fumaça': 135, 'Sombrio': 40, 'Turvo': 15, 'Braço do Norte': 190, 'Orleans': 175, 'Paulo Lopes': 235, 'Meleiro': 0}
 }
 
-
-min_distancia = min(min(distancia.values()) for distancia in distancias.values())
-
-def a_star(distancias, partida, objetivo):
-    open_list = []
-    heapq.heappush(open_list, (0, partida))  
+def a_estrela(grafo_vizinhos, grafo_linha_reta, partida, objetivo):
+    lista = []
+    heapq.heappush(lista, (0, partida))  
     
     chegou_de = {partida: None} 
     
-    g_var = {cidade: float('inf') for cidade in distancias}
-    g_var[partida] = 0    
+    g_var = {cidade: float('inf') for cidade in grafo_vizinhos}  
+    g_var[partida] = 0 
     
-    f_var = {cidade: float('inf') for cidade in distancias}
-    f_var[partida] = g_var[partida] + min_distancia  
+    f_var = {cidade: float('inf') for cidade in grafo_vizinhos}  
+    f_var[partida] = g_var[partida] + heuristica_linha_reta(grafo_linha_reta, partida, objetivo)
     
-    while open_list:
-        f_atual, cidade_atual = heapq.heappop(open_list)
+    while lista:
+        f_atual, cidade_atual = heapq.heappop(lista)
         
         if cidade_atual == objetivo:
             caminho = []
@@ -42,26 +56,32 @@ def a_star(distancias, partida, objetivo):
                 caminho.append(cidade_atual)
                 if chegou_de[cidade_atual]:
                     cidade_anterior = chegou_de[cidade_atual]
-                    distancia_total += distancias[cidade_anterior][cidade_atual]
+                    distancia_total += grafo_vizinhos[cidade_anterior][cidade_atual]
                 cidade_atual = chegou_de[cidade_atual]
             return caminho[::-1], distancia_total
+        
+        for vizinho, distancia in grafo_vizinhos[cidade_atual].items():
+            g = g_var[cidade_atual] + distancia
 
-        for vizinho, distancia in distancias[cidade_atual].items():
-            tentativa_g = g_var[cidade_atual] + distancia
-            
-            if tentativa_g < g_var[vizinho]:
+            if g < g_var[vizinho]:
                 chegou_de[vizinho] = cidade_atual
-                g_var[vizinho] = tentativa_g
-                f_var[vizinho] = g_var[vizinho] + min_distancia
-                heapq.heappush(open_list, (f_var[vizinho], vizinho))
+                g_var[vizinho] = g
+                f_var[vizinho] = g_var[vizinho] + heuristica_linha_reta(grafo_linha_reta, vizinho, objetivo)  # Usa a heurística
+                heapq.heappush(lista, (f_var[vizinho], vizinho))
     
     return None, 0  
 
 
-cidadeinicial = 'Criciuma'
-cidadefinal = 'Garopaba'
+def heuristica_linha_reta(grafo_linha_reta, cidade_atual, objetivo):
+    
+    return grafo_linha_reta[cidade_atual][objetivo]
 
-caminho, distancia_total = a_star(distancias, cidadeinicial, cidadefinal)
+
+cidadeinicial = 'Turvo'
+cidadefinal = 'Laguna'
+
+
+caminho, distancia_total = a_estrela(grafo_vizinhos, grafo_linha_reta, cidadeinicial, cidadefinal)
 if caminho:
     print(f"Melhor caminho de {cidadeinicial} para {cidadefinal}: {' -> '.join(caminho)}")
     print(f"Distância total percorrida: {distancia_total} km")
